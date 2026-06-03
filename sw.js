@@ -1,20 +1,36 @@
-const CACHE_NAME = 'uin-bot-v1.7';
+// Меняй этот номер (например, на v1.91, v2.0), когда выпускаешь обновление!
+const CACHE_NAME = 'uin-bot-v1.9'; 
+
 const ASSETS = [
   './',
   './index.html',
   './manifest.json'
 ];
 
-// Установка воркера и кэширование файлов
+// Принудительно активируем новый воркера сразу же
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
       return cache.addAll(ASSETS);
-    })
+    }).then(() => self.skipWaiting()) // Насильно обновляем
   );
 });
 
-// Работа в офлайне: отдаем файлы из кэша
+// Чистим старый кэш, если версия изменилась
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys => {
+      return Promise.all(
+        keys.map(key => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
+          }
+        })
+      );
+    }).then(() => self.clients.claim())
+  );
+});
+
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request).then(cachedResponse => {
