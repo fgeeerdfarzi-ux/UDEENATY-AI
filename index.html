@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>UINEEX AI - Reflex Sandbox v1.9</title>
+    <title>UINEEX AI - Reflex Sandbox v2.0</title>
     <link rel="manifest" href="manifest.json">
     <style>
         body {
@@ -15,6 +15,7 @@
             height: 100vh;
             overflow: hidden;
             user-select: none;
+            touch-action: none; /* Отключаем системные жесты браузера для точного рисования */
         }
 
         .sidebar {
@@ -71,9 +72,9 @@
             justify-content: center;
             font-size: 2vh;
             cursor: pointer;
+            touch-action: none;
         }
 
-        /* Цвета объектов */
         .wall { background-color: #613333 !important; border: 1px solid #854545; }
         .trap { background-color: #d67627 !important; border: 1px solid #f09343; position: relative; }
         .trap::after { content: "▲"; font-size: 10px; color: #000; position: absolute; bottom: 1px; }
@@ -83,7 +84,6 @@
         .bot { background-color: #3a6b8b !important; border-radius: 50%; z-index: 10; font-size: 2.5vh; }
         .target { background-color: #3a8b4a !important; border-radius: 4px; box-shadow: 0 0 8px #44a356; z-index: 5; }
 
-        /* UI Элементы */
         .hp-display { color: #ff5555; font-size: 16px; font-weight: bold; margin-bottom: 5px; text-align: center; }
         
         .tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
@@ -92,6 +92,8 @@
             font-size: 10px; border-radius: 4px; text-align: center; cursor: pointer; color: #aaa;
         }
         .tool-btn.active { background-color: #4a4a4a; border-color: #fff; color: #fff; font-weight: bold; }
+        .tool-eraser { grid-column: span 2; background-color: #3d2b2b; border-color: #5c3a3a; }
+        .tool-eraser.active { background-color: #8b3a3a; border-color: #ff8888; }
 
         .console-log {
             height: 100px; background-color: #111; border: 1px solid #333;
@@ -120,7 +122,7 @@
     </div>
 
     <div class="sidebar">
-        <div class="logo">UIN-BOT v1.9</div>
+        <div class="logo">UIN-BOT v2.0</div>
         
         <div class="panel-box">
             <h3>❤️ Здоровье ИИ</h3>
@@ -137,12 +139,13 @@
         </div>
 
         <div class="panel-box">
-            <h3>🧱 Инструменты (ЛКМ)</h3>
+            <h3>🧱 Инструменты (ЛКМ / Тач)</h3>
             <div class="tool-grid">
                 <div id="t-wall" class="tool-btn active" onclick="setTool('wall')">🧱 СТЕНА</div>
                 <div id="t-trap" class="tool-btn" onclick="setTool('trap')">🔥 МИНА</div>
                 <div id="t-portal-a" class="tool-btn" onclick="setTool('portal-a')">🔵 ПОРТАЛ A</div>
                 <div id="t-portal-b" class="tool-btn" onclick="setTool('portal-b')">🟠 ПОРТАЛ B</div>
+                <div id="t-eraser" class="tool-btn tool-eraser" onclick="setTool('eraser')">❌ ЛАСТИК (СТЕРЕТЬ)</div>
             </div>
             <div id="limitsInfo" style="font-size: 9px; color: #777; margin-top: 8px;">Мин: 0/6 | Порталов: 0/2</div>
         </div>
@@ -175,7 +178,6 @@
         let simInterval = null;
         let aiMemory = {};
         
-        // Позиции порталов
         let portalA = null;
         let portalB = null;
 
@@ -188,11 +190,33 @@
                 for(let x=0; x<SIZE; x++) {
                     const cell = document.createElement('div');
                     cell.className = 'cell';
-                    cell.onmousedown = (e) => {
+                    
+                    // Универсальный PointerDown (работает шикарно на ПК и Мобилках)
+                    cell.addEventListener('pointerdown', (e) => {
                         if(isRunning) return;
-                        if(e.button === 0) editCell(x, y);
-                        if(e.button === 2) deleteCell(x, y);
-                    };
+                        e.preventDefault();
+                        
+                        // Если клик правой кнопкой мыши на ПК
+                        if (e.pointerType === 'mouse' && e.button === 2) {
+                            clickCell(x, y, true);
+                        } else {
+                            // Обычный клик ЛКМ или тап пальцем на телефоне
+                            clickCell(x, y, false);
+                        }
+                    });
+
+                    // Быстрое зажатое рисование/стирание через CTRL (только для ПК-мыши)
+                    cell.addEventListener('mouseenter', (e) => {
+                        if(isRunning) return;
+                        if (e.pointerType === 'mouse' && e.ctrlKey) {
+                            if (e.buttons === 1) { // Зажата ЛКМ
+                                paintCell(x, y, false);
+                            } else if (e.buttons === 2) { // Зажата ПКМ
+                                paintCell(x, y, true);
+                            }
+                        }
+                    });
+
                     container.appendChild(cell);
                 }
             }
@@ -205,34 +229,54 @@
             document.getElementById('t-' + t).classList.add('active');
         }
 
-        function editCell(x, y) {
+        // Логика одиночного клика/тапа
+        function clickCell(x, y, isRightClick) {
             if((x===bot.x && y===bot.y) || (x===target.x && y===target.y)) return;
             
-            // Если кликаем по существующему блоку — удаляем его
-            if(grid[y][x] !== 0) {
+            if(isRightClick || tool === 'eraser') {
+                deleteCell(x, y);
+            } else {
+                // Умный переключатель: если клетка занята, клик по ней стирает её (удобно для мобилок без ластика)
+                if(grid[y][x] !== 0) {
+                    deleteCell(x, y);
+                } else {
+                    paintCell(x, y, false);
+                }
+            }
+        }
+
+        // Логика непрерывного зажатого рисования
+        function paintCell(x, y, isDelete) {
+            if((x===bot.x && y===bot.y) || (x===target.x && y===target.y)) return;
+            
+            if(isDelete || tool === 'eraser') {
                 deleteCell(x, y);
                 return;
             }
 
-            if(tool === 'wall') grid[y][x] = 1;
-            if(tool === 'trap') {
-                if(countTraps() >= 6) { log("Лимит мин исчерпан!", "warn"); return; }
-                grid[y][x] = 2;
+            // Закрашиваем только пустые клетки, чтобы не сбрасывать порталы или разные типы блоков при зажатии
+            if(grid[y][x] === 0) {
+                if(tool === 'wall') grid[y][x] = 1;
+                if(tool === 'trap') {
+                    if(countTraps() >= 6) return;
+                    grid[y][x] = 2;
+                }
+                if(tool === 'portal-a') {
+                    if(portalA) grid[portalA.y][portalA.x] = 0;
+                    portalA = {x, y};
+                    grid[y][x] = 3;
+                }
+                if(tool === 'portal-b') {
+                    if(portalB) grid[portalB.y][portalB.x] = 0;
+                    portalB = {x, y};
+                    grid[y][x] = 4;
+                }
+                render();
             }
-            if(tool === 'portal-a') {
-                if(portalA) grid[portalA.y][portalA.x] = 0;
-                portalA = {x, y};
-                grid[y][x] = 3;
-            }
-            if(tool === 'portal-b') {
-                if(portalB) grid[portalB.y][portalB.x] = 0;
-                portalB = {x, y};
-                grid[y][x] = 4;
-            }
-            render();
         }
 
         function deleteCell(x, y) {
+            if (grid[y][x] === 0) return; // Уже пусто, рендер не нужен
             if(grid[y][x] === 3) portalA = null;
             if(grid[y][x] === 4) portalB = null;
             grid[y][x] = 0;
@@ -248,7 +292,6 @@
             const traps = countTraps();
             document.getElementById('limitsInfo').innerText = `Мин: ${traps}/6 | Порталов: ${(portalA?1:0)+(portalB?1:0)}/2`;
             
-            // Рендер сердец
             let hText = "";
             for(let i=0; i<5; i++) hText += (i < hp) ? "❤️" : "🖤";
             document.getElementById('hpHearts').innerText = hText;
@@ -296,16 +339,11 @@
                 if(nx<0 || nx>=SIZE || ny<0 || ny>=SIZE) continue;
 
                 let score = 0;
-                
-                // Стены
                 if(grid[ny][nx] === 1) score += 1000;
                 
-                // Эвристика до цели
                 let dist = Math.abs(target.x - nx) + Math.abs(target.y - ny);
                 
-                // ПРОВЕРКА ПОРТАЛА ДЛЯ ИИ
                 if(grid[ny][nx] === 3 && portalB) {
-                    // Если прыгнем в А, окажемся в Б. Считаем расстояние от Б.
                     dist = Math.abs(target.x - portalB.x) + Math.abs(target.y - portalB.y);
                 }
                 if(grid[ny][nx] === 4 && portalA) {
@@ -314,7 +352,6 @@
 
                 score += dist;
 
-                // Память
                 if(aiMemory[`${nx},${ny}`]) score += aiMemory[`${nx},${ny}`] * 20;
 
                 if(score < minScore) {
@@ -329,7 +366,6 @@
                 } else {
                     bot.x = best.x; bot.y = best.y;
                     
-                    // Телепортация
                     if(grid[bot.y][bot.x] === 3 && portalB) {
                         bot.x = portalB.x; bot.y = portalB.y;
                         log("Квантовый прыжок: А -> Б");
@@ -338,7 +374,6 @@
                         log("Квантовый прыжок: Б -> А");
                     }
 
-                    // Мины
                     if(grid[bot.y][bot.x] === 2) {
                         hp--;
                         log(`ПОДРЫВ! Опасно! HP: ${hp}`, "danger");
@@ -403,17 +438,23 @@
                 portalA = {x: 3, y: 3}; grid[3][3] = 3;
                 portalB = {x: 11, y: 11}; grid[11][11] = 4;
                 for(let x=0; x<15; x++) grid[7][x] = 1;
-                grid[7][7] = 0; // проход
+                grid[7][7] = 0;
                 log("Пресет порталов загружен");
             }
             render();
         }
 
         createGrid();
-        window.addEventListener('resize', () => {
-            if(window.innerWidth < window.innerHeight) document.getElementById('orientation-overlay').style.display = 'flex';
-            else document.getElementById('orientation-overlay').style.display = 'none';
-        });
+        
+        function checkOrientation() {
+            if(window.innerWidth < window.innerHeight && window.innerWidth < 768) {
+                document.getElementById('orientation-overlay').style.display = 'flex';
+            } else {
+                document.getElementById('orientation-overlay').style.display = 'none';
+            }
+        }
+        window.addEventListener('resize', checkOrientation);
+        window.addEventListener('load', checkOrientation);
     </script>
 </body>
 </html>
