@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>UINEEX AI - Reflex Sandbox v1.7</title>
+    <title>UINEEX AI - Reflex Sandbox v1.9</title>
     <link rel="manifest" href="manifest.json">
     <style>
-        /* Стильная строгая серая тема */
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
             background-color: #1a1a1a;
@@ -30,7 +29,7 @@
             overflow-y: auto;
         }
 
-        .logo { font-size: 18px; font-weight: bold; color: #ffffff; text-align: center; letter-spacing: 1px; }
+        .logo { font-size: 18px; font-weight: bold; color: #ffffff; text-align: center; letter-spacing: 1px; margin-bottom: 5px; }
 
         .panel-box {
             background-color: #2d2d2d;
@@ -39,7 +38,7 @@
             border: 1px solid #3d3d3d;
         }
 
-        .panel-box h3 { margin-top: 0; font-size: 11px; color: #b0b0b0; text-transform: uppercase; margin-bottom: 6px; }
+        .panel-box h3 { margin-top: 0; font-size: 10px; color: #b0b0b0; text-transform: uppercase; margin-bottom: 6px; }
 
         .main-container {
             flex: 1;
@@ -49,10 +48,8 @@
             align-items: center;
             justify-content: center;
             padding: 10px;
-            position: relative;
         }
 
-        /* Игровое поле-сетка (чуть уменьшили клетки для мобилок) */
         #grid-container {
             display: grid;
             grid-template-columns: repeat(15, 4.5vh);
@@ -62,7 +59,6 @@
             padding: 5px;
             border-radius: 8px;
             border: 2px solid #3d3d3d;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
         .cell {
@@ -73,124 +69,94 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2.2vh;
+            font-size: 2vh;
+            cursor: pointer;
         }
+
+        /* Цвета объектов */
+        .wall { background-color: #613333 !important; border: 1px solid #854545; }
+        .trap { background-color: #d67627 !important; border: 1px solid #f09343; position: relative; }
+        .trap::after { content: "▲"; font-size: 10px; color: #000; position: absolute; bottom: 1px; }
+        .portal-a { background-color: #3a8bba !important; border: 2px solid #4fc1ff; border-radius: 50%; box-shadow: 0 0 10px #4fc1ff; }
+        .portal-b { background-color: #d68e27 !important; border: 2px solid #ff9d47; border-radius: 50%; box-shadow: 0 0 10px #ff9d47; }
         
-        .wall { background-color: #613333 !important; border: 1px solid #854545; box-sizing: border-box; }
-        .trap { background-color: #d67627 !important; border: 1px solid #f09343; box-sizing: border-box; position: relative; }
-        .trap::after { content: "▲"; font-size: 8px; color: #1a1a1a; position: absolute; bottom: 1px; }
-        .bot { background-color: #3a6b8b !important; border-radius: 50%; box-shadow: 0 0 8px #4fc1ff; z-index: 10; }
+        .bot { background-color: #3a6b8b !important; border-radius: 50%; z-index: 10; font-size: 2.5vh; }
         .target { background-color: #3a8b4a !important; border-radius: 4px; box-shadow: 0 0 8px #44a356; z-index: 5; }
 
-        /* Выпадающий список лабиринтов */
-        select {
-            width: 100%; background-color: #242424; color: white; border: 1px solid #444;
-            padding: 8px; border-radius: 4px; font-weight: bold; cursor: pointer;
-        }
-
-        /* Выбор инструмента */
-        .tool-select { display: flex; gap: 8px; }
+        /* UI Элементы */
+        .hp-display { color: #ff5555; font-size: 16px; font-weight: bold; margin-bottom: 5px; text-align: center; }
+        
+        .tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
         .tool-btn {
-            flex: 1; background-color: #242424; border: 1px solid #444; padding: 6px;
-            font-size: 11px; border-radius: 4px; text-align: center; cursor: pointer;
+            background-color: #242424; border: 1px solid #444; padding: 6px;
+            font-size: 10px; border-radius: 4px; text-align: center; cursor: pointer; color: #aaa;
         }
-        .tool-btn.active { background-color: #4a4a4a; border-color: #888; font-weight: bold; }
+        .tool-btn.active { background-color: #4a4a4a; border-color: #fff; color: #fff; font-weight: bold; }
 
-        /* Переключатели способностей */
-        .skill-toggle {
-            display: flex; align-items: center; justify-content: space-between;
-            margin-bottom: 4px; font-size: 11px; background: #242424; padding: 4px 6px; border-radius: 4px;
-        }
-        .switch { position: relative; display: inline-block; width: 28px; height: 14px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .2s; border-radius: 14px; }
-        .slider:before { position: absolute; content: ""; height: 10px; width: 10px; left: 2px; bottom: 2px; background-color: white; transition: .2s; border-radius: 50%; }
-        input:checked + .slider { background-color: #3a8b4a; }
-        input:checked + .slider:before { transform: translateX(14px); }
-
-        /* Консоль логов */
         .console-log {
-            height: 90px; background-color: #111111; border: 1px solid #333333;
-            border-radius: 6px; font-family: monospace; font-size: 10px; padding: 6px; overflow-y: auto; color: #a8a8a8;
+            height: 100px; background-color: #111; border: 1px solid #333;
+            border-radius: 4px; font-family: monospace; font-size: 10px; padding: 6px; overflow-y: auto; color: #888;
         }
-        .log-entry { margin-bottom: 2px; }
         .log-warn { color: #cc9933; }
-        .log-danger { color: #ff5555; }
+        .log-danger { color: #ff5555; font-weight: bold; }
         .log-success { color: #44a356; }
 
-        button { color: white; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-weight: bold; width: 100%; }
-        .btn-start { background-color: #3a8b4a; font-size: 12px; margin-bottom: 4px; }
-        .btn-stop { background-color: #8b3a3a; font-size: 12px; margin-bottom: 4px; display: none; }
-        .btn-clear { background-color: #4a4a4a; font-size: 11px; }
+        button { color: white; border: none; border-radius: 6px; padding: 10px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 5px; }
+        .btn-start { background-color: #3a8b4a; }
+        .btn-stop { background-color: #8b3a3a; display: none; }
 
-        /* ЭКРАН ПОВОРОТА ДЛЯ МОБИЛОК */
         #orientation-overlay {
-            display: none;
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background-color: #1a1a1a; z-index: 9999;
-            flex-direction: column; align-items: center; justify-content: center;
-            color: white; text-align: center; padding: 20px; box-sizing: border-box;
-        }
-        .rotate-icon { font-size: 50px; animation: spin 2s infinite linear; margin-bottom: 15px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* Адаптивность под горизонтальный режим телефона */
-        @media (max-height: 500px) {
-            .sidebar { width: 220px; padding: 8px; gap: 6px; }
-            .logo { font-size: 14px; }
-            .panel-box { padding: 6px; }
-            .panel-box h3 { font-size: 9px; margin-bottom: 4px; }
-            .tool-btn, select, button { padding: 4px; font-size: 10px; }
-            .console-log { height: 50px; font-size: 9px; }
+            display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: #1a1a1a; z-index: 9999; flex-direction: column; align-items: center; justify-content: center;
+            color: white; text-align: center;
         }
     </style>
 </head>
 <body>
 
     <div id="orientation-overlay">
-        <div class="rotate-icon">🔄</div>
-        <h2>Пожалуйста, переверните устройство</h2>
-        <p>Для комфортной игры необходим горизонтальный (альбомный) режим экрана!</p>
+        <h2>🔄 Переверните телефон</h2>
+        <p>Для игры нужен горизонтальный режим</p>
     </div>
 
     <div class="sidebar">
-        <div class="logo">UIN-BOT SIMULATOR</div>
+        <div class="logo">UIN-BOT v1.9</div>
         
         <div class="panel-box">
-            <h3>📂 Библиотека Карт</h3>
-            <select id="mapPresetSelect" onchange="loadPresetMap()">
-                <option value="empty">➕ Чистое поле (Свой уровень)</option>
-                <option value="snake">🐍 Пресет: Змейка</option>
-                <option value="spiral">🌀 Пресет: Спираль Смерти</option>
-                <option value="mines">💥 Пресет: Минное Поле</option>
+            <h3>❤️ Здоровье ИИ</h3>
+            <div id="hpHearts" class="hp-display">❤️❤️❤️❤️❤️</div>
+        </div>
+
+        <div class="panel-box">
+            <h3>📂 Карты</h3>
+            <select id="mapPreset" onchange="loadPreset()">
+                <option value="empty">Свой уровень</option>
+                <option value="mines">Минное поле (6 мин)</option>
+                <option value="portal_test">Тест Порталов</option>
             </select>
         </div>
 
         <div class="panel-box">
-            <h3>🎮 Испытание</h3>
-            <button id="startSimulationBtn" class="btn-start">▶ ЗАПУСТИТЬ ТЕСТ</button>
-            <button id="stopSimulationBtn" class="btn-stop">🛑 НА СТАРТ</button>
-            <button id="clearMapBtn" class="btn-clear">Очистить всё</button>
-        </div>
-
-        <div class="panel-box">
-            <h3>🧱 Материал (ЛКМ)</h3>
-            <div class="tool-select">
-                <div id="toolWall" class="tool-btn active" onclick="selectTool('wall')">🧱 СТЕНА</div>
-                <div id="toolTrap" class="tool-btn" onclick="selectTool('trap')">🔥 ЛОВУШКА</div>
+            <h3>🧱 Инструменты (ЛКМ)</h3>
+            <div class="tool-grid">
+                <div id="t-wall" class="tool-btn active" onclick="setTool('wall')">🧱 СТЕНА</div>
+                <div id="t-trap" class="tool-btn" onclick="setTool('trap')">🔥 МИНА</div>
+                <div id="t-portal-a" class="tool-btn" onclick="setTool('portal-a')">🔵 ПОРТАЛ A</div>
+                <div id="t-portal-b" class="tool-btn" onclick="setTool('portal-b')">🟠 ПОРТАЛ B</div>
             </div>
+            <div id="limitsInfo" style="font-size: 9px; color: #777; margin-top: 8px;">Мин: 0/6 | Порталов: 0/2</div>
         </div>
 
         <div class="panel-box">
-            <h3>🧠 Способности ИИ</h3>
-            <div class="skill-toggle"><span>Память</span><label class="switch"><input type="checkbox" id="skillMemory" checked><span class="slider"></span></label></div>
-            <div class="skill-toggle"><span>Расстояние</span><label class="switch"><input type="checkbox" id="skillHeuristic" checked><span class="slider"></span></label></div>
-            <div class="skill-toggle"><span>Глаза</span><label class="switch"><input type="checkbox" id="skillAvoidance" checked><span class="slider"></span></label></div>
+            <h3>🎮 Управление</h3>
+            <button id="startBtn" class="btn-start" onclick="startTest()">▶ ЗАПУСТИТЬ</button>
+            <button id="stopBtn" class="btn-stop" onclick="stopTest()">🛑 СБРОСИТЬ</button>
+            <button style="background: #444;" onclick="clearAll()">Очистить всё</button>
         </div>
 
-        <div class="panel-box" style="flex: 1; display: flex; flex-direction: column;">
-            <h3>📟 Монитор Мышления</h3>
-            <div class="console-log" id="consoleLog"></div>
+        <div class="panel-box" style="flex:1;">
+            <h3>📟 Монитор</h3>
+            <div id="consoleLog" class="console-log"></div>
         </div>
     </div>
 
@@ -199,264 +165,255 @@
     </div>
 
     <script>
-        // Регистрация Сервис-Воркера для работы без интернета
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js')
-                .then(() => console.log("UIN-Bot готов к работе в оффлайне!"))
-                .catch(err => console.log("Ошибка PWA:", err));
-        }
-
-        const GRID_SIZE = 15;
-        let gridData = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0));
+        const SIZE = 15;
+        let grid = Array(SIZE).fill().map(() => Array(SIZE).fill(0));
         let bot = { x: 1, y: 1 };
         let target = { x: 13, y: 13 };
-        let currentTool = 'wall';
+        let hp = 5;
+        let tool = 'wall';
         let isRunning = false;
-        let aiMemory = {};
-        let steps = 0;
         let simInterval = null;
+        let aiMemory = {};
+        
+        // Позиции порталов
+        let portalA = null;
+        let portalB = null;
 
         document.addEventListener('contextmenu', e => e.preventDefault());
 
-        // ПРОВЕРКА ОРИЕНТАЦИИ ЭКРАНА
-        function checkOrientation() {
-            // Если ширина меньше высоты (телефон вертикально)
-            if (window.innerWidth < window.innerHeight && window.innerWidth < 768) {
-                document.getElementById('orientation-overlay').style.display = 'flex';
-            } else {
-                document.getElementById('orientation-overlay').style.display = 'none';
-            }
-        }
-        window.addEventListener('resize', checkOrientation);
-        window.addEventListener('load', checkOrientation);
-
         function createGrid() {
-            const gridContainer = document.getElementById('grid-container');
-            gridContainer.innerHTML = '';
-            for (let y = 0; y < GRID_SIZE; y++) {
-                for (let x = 0; x < GRID_SIZE; x++) {
+            const container = document.getElementById('grid-container');
+            container.innerHTML = '';
+            for(let y=0; y<SIZE; y++) {
+                for(let x=0; x<SIZE; x++) {
                     const cell = document.createElement('div');
                     cell.className = 'cell';
-                    cell.dataset.x = x;
-                    cell.dataset.y = y;
-                    
-                    // Поддержка и тач-событий для телефонов
-                    const handleInput = (e) => {
-                        if (isRunning) return;
-                        if (e.type === 'touchstart' || e.button === 0) placeBlock(x, y);
+                    cell.onmousedown = (e) => {
+                        if(isRunning) return;
+                        if(e.button === 0) editCell(x, y);
+                        if(e.button === 2) deleteCell(x, y);
                     };
-                    
-                    cell.addEventListener('mousedown', handleInput);
-                    cell.addEventListener('touchstart', handleInput, {passive: true});
-                    
-                    // Удаление на ПКМ (для ПК)
-                    cell.addEventListener('contextmenu', () => { if(!isRunning) removeBlock(x, y); });
-
-                    gridContainer.appendChild(cell);
+                    container.appendChild(cell);
                 }
             }
-            renderEntities();
+            render();
         }
 
-        // БИБЛИОТЕКА ГОТОВЫХ ЛАБИРИНТОВ
-        function loadPresetMap() {
-            const preset = document.getElementById('mapPresetSelect').value;
-            gridData = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0)); // чистим
-            aiMemory = {};
+        function setTool(t) {
+            tool = t;
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('t-' + t).classList.add('active');
+        }
 
-            if (preset === 'snake') {
-                for(let x=0; x<12; x++) gridData[4][x] = 1;
-                for(let x=3; x<15; x++) gridData[9][x] = 1;
-                logMessage("Загружена карта: Змейка 🐍");
-            } 
-            else if (preset === 'spiral') {
-                for(let i=0; i<14; i++) {
-                    gridData[2][i] = 1; gridData[12][i+1] = 1;
-                    if(i>1 && i<13) { gridData[i][13] = 1; gridData[i][2] = 1; }
-                }
-                gridData[3][2] = 0; gridData[11][13] = 0;
-                logMessage("Загружена карта: Спираль Смерти 🌀");
-            } 
-            else if (preset === 'mines') {
-                for(let y=0; y<GRID_SIZE; y++) {
-                    for(let x=0; x<GRID_SIZE; x++) {
-                        if((x+y)%3 === 0 && (x!==1 || y!==1) && (x!==13 || y!==13)) {
-                            gridData[y][x] = 2; // закидываем ловушками
-                        }
-                    }
-                }
-                logMessage("Загружена карта: Минное Поле 🔥");
+        function editCell(x, y) {
+            if((x===bot.x && y===bot.y) || (x===target.x && y===target.y)) return;
+            
+            // Если кликаем по существующему блоку — удаляем его
+            if(grid[y][x] !== 0) {
+                deleteCell(x, y);
+                return;
             }
-            renderEntities();
-        }
 
-        function selectTool(tool) {
-            currentTool = tool;
-            document.getElementById('toolWall').classList.toggle('active', tool === 'wall');
-            document.getElementById('toolTrap').classList.toggle('active', tool === 'trap');
-        }
-
-        function placeBlock(x, y) {
-            if ((x === bot.x && y === bot.y) || (x === target.x && y === target.y)) return;
-            // На мобилках клик по существующему блоку стирает его (замена ПКМ)
-            if (gridData[y][x] !== 0) {
-                gridData[y][x] = 0;
-            } else {
-                gridData[y][x] = (currentTool === 'wall') ? 1 : 2;
+            if(tool === 'wall') grid[y][x] = 1;
+            if(tool === 'trap') {
+                if(countTraps() >= 6) { log("Лимит мин исчерпан!", "warn"); return; }
+                grid[y][x] = 2;
             }
-            renderEntities();
-        }
-
-        function removeBlock(x, y) {
-            if (gridData[y][x] !== 0) {
-                gridData[y][x] = 0;
-                renderEntities();
+            if(tool === 'portal-a') {
+                if(portalA) grid[portalA.y][portalA.x] = 0;
+                portalA = {x, y};
+                grid[y][x] = 3;
             }
+            if(tool === 'portal-b') {
+                if(portalB) grid[portalB.y][portalB.x] = 0;
+                portalB = {x, y};
+                grid[y][x] = 4;
+            }
+            render();
         }
 
-        function renderEntities() {
+        function deleteCell(x, y) {
+            if(grid[y][x] === 3) portalA = null;
+            if(grid[y][x] === 4) portalB = null;
+            grid[y][x] = 0;
+            render();
+        }
+
+        function countTraps() {
+            return grid.flat().filter(c => c === 2).length;
+        }
+
+        function render() {
             const cells = document.querySelectorAll('.cell');
-            cells.forEach(cell => {
-                const x = parseInt(cell.dataset.x);
-                const y = parseInt(cell.dataset.y);
-                cell.className = 'cell'; cell.innerText = '';
-                if (gridData[y][x] === 1) cell.classList.add('wall');
-                if (gridData[y][x] === 2) cell.classList.add('trap');
-                if (bot.x === x && bot.y === y) { cell.classList.add('bot'); cell.innerText = '🤖'; }
-                else if (target.x === x && target.y === y) { cell.classList.add('target'); cell.innerText = '🌀'; }
-            });
-            document.getElementById('botPos').innerText = `(${bot.x}, ${bot.y})`;
-            document.getElementById('stepsCount').innerText = steps;
-            document.getElementById('wallsLearned').innerText = Object.keys(aiMemory).length;
-        }
+            const traps = countTraps();
+            document.getElementById('limitsInfo').innerText = `Мин: ${traps}/6 | Порталов: ${(portalA?1:0)+(portalB?1:0)}/2`;
+            
+            // Рендер сердец
+            let hText = "";
+            for(let i=0; i<5; i++) hText += (i < hp) ? "❤️" : "🖤";
+            document.getElementById('hpHearts').innerText = hText;
 
-        function logMessage(text, type = '') {
-            const consoleLog = document.getElementById('consoleLog');
-            const entry = document.createElement('div');
-            entry.className = `log-entry`;
-            if (type === 'warn') entry.className += ' log-warn';
-            if (type === 'danger') entry.className += ' log-danger';
-            if (type === 'success') entry.className += ' log-success';
-            entry.innerText = `> ${text}`;
-            consoleLog.appendChild(entry);
-            consoleLog.scrollTop = consoleLog.scrollHeight;
-        }
+            cells.forEach((cell, i) => {
+                const x = i % SIZE;
+                const y = Math.floor(i / SIZE);
+                cell.className = 'cell';
+                cell.innerText = '';
 
-        function checkPathExists() {
-            let queue = [{ x: bot.x, y: bot.y }];
-            let visited = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(false));
-            visited[bot.y][bot.x] = true;
-            while (queue.length > 0) {
-                let current = queue.shift();
-                if (current.x === target.x && current.y === target.y) return true;
-                const directions = [{x:0, y:-1}, {x:0, y:1}, {x:-1, y:0}, {x:1, y:0}];
-                for (let d of directions) {
-                    let nx = current.x + d.x, ny = current.y + d.y;
-                    if (nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE) {
-                        if (!visited[ny][nx] && gridData[ny][nx] !== 1) {
-                            visited[ny][nx] = true; queue.push({ x: nx, y: ny });
-                        }
-                    }
+                if(grid[y][x] === 1) cell.classList.add('wall');
+                if(grid[y][x] === 2) cell.classList.add('trap');
+                if(grid[y][x] === 3) cell.classList.add('portal-a');
+                if(grid[y][x] === 4) cell.classList.add('portal-b');
+
+                if(x === bot.x && y === bot.y) {
+                    cell.classList.add('bot');
+                    cell.innerText = hp > 0 ? "🤖" : "💥";
                 }
-            }
-            return false;
-        }
-
-        function autoUnblockPortal() {
-            logMessage("БЛОКИРОВКА ПОРТАЛА! Снос стен вокруг финиша...", "danger");
-            const neighbors = [{x: target.x, y: target.y}, {x: target.x - 1, y: target.y}, {x: target.x + 1, y: target.y}, {x: target.x, y: target.y - 1}, {x: target.x, y: target.y + 1}];
-            neighbors.forEach(pos => {
-                if (pos.x >= 0 && pos.x < GRID_SIZE && pos.y >= 0 && pos.y < GRID_SIZE) {
-                    if (gridData[pos.y][pos.x] === 1) gridData[pos.y][pos.x] = 0;
+                if(x === target.x && y === target.y) {
+                    cell.classList.add('target');
+                    cell.innerText = "🌀";
                 }
             });
-            renderEntities();
         }
 
-        function aiLogicStep() {
-            const useMemory = document.getElementById('skillMemory').checked;
-            const useHeuristic = document.getElementById('skillHeuristic').checked;
-            const useAvoidance = document.getElementById('skillAvoidance').checked;
+        function log(msg, type="") {
+            const l = document.getElementById('consoleLog');
+            const e = document.createElement('div');
+            if(type) e.className = 'log-' + type;
+            e.innerText = "> " + msg;
+            l.appendChild(e);
+            l.scrollTop = l.scrollHeight;
+        }
 
-            const directions = [{x:0, y:-1}, {x:0, y:1}, {x:-1, y:0}, {x:1, y:0}];
-            let bestMove = null, minScore = Infinity;
+        function aiStep() {
+            if(hp <= 0) return;
 
-            for (let dir of directions) {
-                let nextX = bot.x + dir.x, nextY = bot.y + dir.y;
-                if (nextX < 0 || nextX >= GRID_SIZE || nextY < 0 || nextY >= GRID_SIZE) continue;
+            const dirs = [{x:0,y:-1},{x:0,y:1},{x:-1,y:0},{x:1,y:0}];
+            let best = null;
+            let minScore = Infinity;
+
+            for(let d of dirs) {
+                let nx = bot.x + d.x, ny = bot.y + d.y;
+                if(nx<0 || nx>=SIZE || ny<0 || ny>=SIZE) continue;
+
                 let score = 0;
-                if (gridData[nextY][nextX] === 1 && useAvoidance) score += 1000;
-                if (useHeuristic) score += Math.abs(target.x - nextX) + Math.abs(target.y - nextY);
-                if (useMemory && aiMemory[`${nextX},${nextY}`]) score += aiMemory[`${nextX},${nextY}`] * 15;
+                
+                // Стены
+                if(grid[ny][nx] === 1) score += 1000;
+                
+                // Эвристика до цели
+                let dist = Math.abs(target.x - nx) + Math.abs(target.y - ny);
+                
+                // ПРОВЕРКА ПОРТАЛА ДЛЯ ИИ
+                if(grid[ny][nx] === 3 && portalB) {
+                    // Если прыгнем в А, окажемся в Б. Считаем расстояние от Б.
+                    dist = Math.abs(target.x - portalB.x) + Math.abs(target.y - portalB.y);
+                }
+                if(grid[ny][nx] === 4 && portalA) {
+                    dist = Math.abs(target.x - portalA.x) + Math.abs(target.y - portalA.y);
+                }
 
-                if (score < minScore) { minScore = score; bestMove = { x: nextX, y: nextY }; }
-            }
+                score += dist;
 
-            if (bestMove) {
-                if (gridData[bestMove.y][bestMove.x] === 1) {
-                    logMessage(`БАМС! Препятствие на (${bestMove.x}, ${bestMove.y})`, 'warn');
-                    if (useMemory) aiMemory[`${bestMove.x},${bestMove.y}`] = (aiMemory[`${bestMove.x},${bestMove.y}`] || 0) + 8;
-                    steps++;
-                } else {
-                    bot.x = bestMove.x; bot.y = bestMove.y; steps++;
-                    if (gridData[bot.y][bot.x] === 2) {
-                        logMessage(`🔥 Ловушка на (${bot.x}, ${bot.y})!`, 'danger');
-                        if (useMemory) aiMemory[`${bot.x},${bot.y}`] = (aiMemory[`${bot.x},${bot.y}`] || 0) + 25;
-                    } else if (useMemory) {
-                        aiMemory[`${bot.x},${bot.y}`] = (aiMemory[`${bot.x},${bot.y}`] || 0) + 1;
-                    }
+                // Память
+                if(aiMemory[`${nx},${ny}`]) score += aiMemory[`${nx},${ny}`] * 20;
+
+                if(score < minScore) {
+                    minScore = score;
+                    best = {x: nx, y: ny};
                 }
             }
 
-            renderEntities();
+            if(best) {
+                if(grid[best.y][best.x] === 1) {
+                    aiMemory[`${best.x},${best.y}`] = (aiMemory[`${best.x},${best.y}`]||0) + 10;
+                } else {
+                    bot.x = best.x; bot.y = best.y;
+                    
+                    // Телепортация
+                    if(grid[bot.y][bot.x] === 3 && portalB) {
+                        bot.x = portalB.x; bot.y = portalB.y;
+                        log("Квантовый прыжок: А -> Б");
+                    } else if(grid[bot.y][bot.x] === 4 && portalA) {
+                        bot.x = portalA.x; bot.y = portalA.y;
+                        log("Квантовый прыжок: Б -> А");
+                    }
 
-            if (bot.x === target.x && bot.y === target.y) {
+                    // Мины
+                    if(grid[bot.y][bot.x] === 2) {
+                        hp--;
+                        log(`ПОДРЫВ! Опасно! HP: ${hp}`, "danger");
+                        aiMemory[`${bot.x},${bot.y}`] = (aiMemory[`${bot.x},${bot.y}`]||0) + 50;
+                        if(hp <= 0) {
+                            clearInterval(simInterval);
+                            log("РОБОТ УНИЧТОЖЕН", "danger");
+                            setTimeout(() => stopTest(), 1000);
+                        }
+                    } else {
+                        aiMemory[`${bot.x},${bot.y}`] = (aiMemory[`${bot.x},${bot.y}`]||0) + 1;
+                    }
+                }
+            }
+            render();
+
+            if(bot.x === target.x && bot.y === target.y) {
                 clearInterval(simInterval);
-                logMessage(`ПОБЕДА за ${steps} шагов!`, 'success');
-                setTimeout(() => {
-                    alert(`🎉 Уровень пройден за ${steps} шагов!`);
-                    autoResetToNextLevel();
-                }, 200);
+                log("ИСПЫТАНИЕ ПРОЙДЕНО!", "success");
+                alert("Победа!");
+                clearAll();
             }
         }
 
-        function autoResetToNextLevel() {
-            isRunning = false; bot = { x: 1, y: 1 }; steps = 0;
-            gridData = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0));
-            document.getElementById('startSimulationBtn').style.display = "block";
-            document.getElementById('stopSimulationBtn').style.display = "none";
-            document.getElementById('mapPresetSelect').value = "empty";
-            createGrid();
+        function startTest() {
+            isRunning = true;
+            hp = 5;
+            document.getElementById('startBtn').style.display = 'none';
+            document.getElementById('stopBtn').style.display = 'block';
+            simInterval = setInterval(aiStep, 150);
         }
 
-        document.getElementById('startSimulationBtn').addEventListener('click', () => {
-            if (!checkPathExists()) {
-                autoUnblockPortal();
-                if (!checkPathExists()) { logMessage("Карта заблокирована!", "danger"); return; }
-            }
-            isRunning = true; steps = 0;
-            document.getElementById('startSimulationBtn').style.display = "none";
-            document.getElementById('stopSimulationBtn').style.display = "block";
-            simInterval = setInterval(aiLogicStep, 120); // Сделали робота еще быстрее для динамики на смартфонах!
-        });
+        function stopTest() {
+            clearInterval(simInterval);
+            isRunning = false;
+            bot = {x: 1, y: 1};
+            hp = 5;
+            document.getElementById('startBtn').style.display = 'block';
+            document.getElementById('stopBtn').style.display = 'none';
+            render();
+        }
 
-        document.getElementById('stopSimulationBtn').addEventListener('click', () => {
-            clearInterval(simInterval); isRunning = false; bot = { x: 1, y: 1 }; steps = 0;
-            document.getElementById('startSimulationBtn').style.display = "block";
-            document.getElementById('stopSimulationBtn').style.display = "none";
-            renderEntities();
-        });
+        function clearAll() {
+            grid = Array(SIZE).fill().map(() => Array(SIZE).fill(0));
+            portalA = null; portalB = null;
+            aiMemory = {};
+            stopTest();
+        }
 
-        document.getElementById('clearMapBtn').addEventListener('click', () => {
-            if (!isRunning) {
-                gridData = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0));
-                aiMemory = {};
-                document.getElementById('mapPresetSelect').value = "empty";
-                logMessage("Карта очищена."); renderEntities();
+        function loadPreset() {
+            const p = document.getElementById('mapPreset').value;
+            clearAll();
+            if(p === 'mines') {
+                for(let i=0; i<6; i++) {
+                    let rx = Math.floor(Math.random()*13)+1;
+                    let ry = Math.floor(Math.random()*13)+1;
+                    grid[ry][rx] = 2;
+                }
+                log("Размещено 6 случайных мин");
             }
-        });
+            if(p === 'portal_test') {
+                portalA = {x: 3, y: 3}; grid[3][3] = 3;
+                portalB = {x: 11, y: 11}; grid[11][11] = 4;
+                for(let x=0; x<15; x++) grid[7][x] = 1;
+                grid[7][7] = 0; // проход
+                log("Пресет порталов загружен");
+            }
+            render();
+        }
 
         createGrid();
+        window.addEventListener('resize', () => {
+            if(window.innerWidth < window.innerHeight) document.getElementById('orientation-overlay').style.display = 'flex';
+            else document.getElementById('orientation-overlay').style.display = 'none';
+        });
     </script>
 </body>
 </html>
