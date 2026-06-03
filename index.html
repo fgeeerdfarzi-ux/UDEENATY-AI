@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UINEEX AI - Reflex Sandbox v1.0</title>
+    <style>
+        /* Стильная строгая серая тема */
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .sidebar {
+            width: 320px;
+            background-color: #242424;
+            border-right: 1px solid #333333;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            box-sizing: border-box;
+        }
+
+        .logo { font-size: 20px; font-weight: bold; color: #ffffff; text-align: center; letter-spacing: 1px; }
+
+        .panel-box {
+            background-color: #2d2d2d;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #3d3d3d;
+        }
+
+        .panel-box h3 { margin-top: 0; font-size: 12px; color: #b0b0b0; text-transform: uppercase; margin-bottom: 8px;}
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #141414;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+        }
+
+        /* Игровое поле-сетка */
+        #grid-container {
+            display: grid;
+            grid-template-columns: repeat(15, 35px);
+            grid-template-rows: repeat(15, 35px);
+            gap: 2px;
+            background-color: #262626;
+            padding: 5px;
+            border-radius: 8px;
+            border: 2px solid #3d3d3d;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .cell {
+            width: 35px;
+            height: 35px;
+            background-color: #1e1e1e;
+            border-radius: 3px;
+            transition: background-color 0.15s;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .cell:hover { background-color: #2a2a2a; }
+        
+        /* Стили объектов на карте */
+        .wall { background-color: #7a3a3a !important; border: 1px solid #9c4a4a; box-sizing: border-box; }
+        .bot { background-color: #3a6b8b !important; border-radius: 50%; box-shadow: 0 0 10px #4fc1ff; }
+        .target { background-color: #3a8b4a !important; border-radius: 4px; box-shadow: 0 0 10px #44a356; animation: pulse 2s infinite; }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.95); opacity: 0.8; }
+            100% { transform: scale(1); }
+        }
+
+        /* Переключатели способностей в мозгу */
+        .skill-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 13px;
+            background: #242424;
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: 1px solid #3d3d3d;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 34px;
+            height: 20px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #555; transition: .3s; border-radius: 20px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
+            background-color: white; transition: .3s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: #3a8b4a; }
+        input:checked + .slider:before { transform: translateX(14px); }
+
+        /* Лог консоли ИИ */
+        .console-log {
+            height: 150px;
+            background-color: #111111;
+            border: 1px solid #333333;
+            border-radius: 6px;
+            font-family: 'Consolas', monospace;
+            font-size: 11px;
+            padding: 10px;
+            overflow-y: auto;
+            color: #a8a8a8;
+            box-sizing: border-box;
+        }
+        .log-entry { margin-bottom: 4px; line-height: 1.3; }
+        .log-warn { color: #cc9933; }
+        .log-success { color: #44a356; }
+
+        button {
+            background-color: #4a4a4a; color: white; border: none; border-radius: 6px;
+            padding: 8px 15px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.2s;
+        }
+        button:hover { background-color: #5a5a5a; }
+        .btn-clear { background-color: #6e3636; margin-top: 5px; }
+        .btn-clear:hover { background-color: #8b4343; }
+
+        .stats-text { font-size: 12px; margin-bottom: 5px; color: #aaaaaa; }
+        .stats-text b { color: #ffffff; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="logo">UIN-BOT SIMULATOR</div>
+        
+        <div class="panel-box">
+            <h3>🧠 Нейро-Модификатор Способностей</h3>
+            
+            <div class="skill-toggle">
+                <span>Память на препятствия</span>
+                <label class="switch">
+                    <input type="checkbox" id="skillMemory" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            
+            <div class="skill-toggle">
+                <span>Оценка тупиков (Эвристика)</span>
+                <label class="switch">
+                    <input type="checkbox" id="skillHeuristic" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="skill-toggle">
+                <span>Адаптивный обход стен</span>
+                <label class="switch">
+                    <input type="checkbox" id="skillAvoidance" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <div class="panel-box">
+            <h3>📊 Статы Нейросети</h3>
+            <div class="stats-text">Позиция робота: <b id="botPos">(0, 0)</b></div>
+            <div class="stats-text">Запомнено препятствий: <b id="wallsLearned">0</b></div>
+            <div class="stats-text">Сделано шагов: <b id="stepsCount">0</b></div>
+            <button id="resetSimulationBtn" class="btn-clear">Сбросить симуляцию</button>
+        </div>
+
+        <div class="panel-box" style="flex: 1; display: flex; flex-direction: column;">
+            <h3>📟 Монитор Мышления ИИ</h3>
+            <div class="console-log" id="consoleLog"></div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div style="margin-bottom: 15px; font-size: 13px; color: #888;">
+            💡 <b>Инструкция:</b> Кликай по клеткам поля во время движения робота, чтобы ставить или убирать стены!
+        </div>
+        <div id="grid-container"></div>
+    </div>
+
+    <script>
+        const GRID_SIZE = 15;
+        let gridData = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0)); // 0 - пусто, 1 - стена
+        
+        // Координаты сущностей
+        let bot = { x: 1, y: 1 };
+        let target = { x: 13, y: 13 };
+        
+        // Мозг ИИ
+        let aiMemory = {}; // Сюда ИИ записывает плохие клетки, где он наткнулся на препятствие
+        let steps = 0;
+        let simInterval = null;
+
+        // Создаем карту в DOM
+        const gridContainer = document.getElementById('grid-container');
+        function createGrid() {
+            gridContainer.innerHTML = '';
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.x = x;
+                    cell.dataset.y = y;
+                    
+                    // Клик ставит / убирает стену
+                    cell.addEventListener('mousedown', () => toggleWall(x, y));
+                    
+                    gridContainer.appendChild(cell);
+                }
+            }
+            renderEntities();
+        }
+
+        // Обновляем визуальное отображение на поле
+        function renderEntities() {
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach(cell => {
+                const x = parseInt(cell.dataset.x);
+                const y = parseInt(cell.dataset.y);
+                
+                cell.className = 'cell'; // сброс классов
+                cell.innerText = '';
+                
+                if (gridData[y][x] === 1) {
+                    cell.classList.add('wall');
+                } else if (bot.x === x && bot.y === y) {
+                    cell.classList.add('bot');
+                    cell.innerText = '🤖';
+                } else if (target.x === x && target.y === y) {
+                    cell.classList.add('target');
+                    cell.innerText = '🌀';
+                }
+            });
+            
+            document.getElementById('botPos').innerText = `(${bot.x}, ${bot.y})`;
+            document.getElementById('stepsCount').innerText = steps;
+            document.getElementById('wallsLearned').innerText = Object.keys(aiMemory).length;
+        }
+
+        function toggleWall(x, y) {
+            if ((x === bot.x && y === bot.y) || (x === target.x && y === target.target)) return;
+            gridData[y][x] = gridData[y][x] === 1 ? 0 : 1;
+            renderEntities();
+            logMessage(`Пользователь изменил ландшафт в точке (${x}, ${y})`, 'warn');
+        }
+
+        function logMessage(text, type = '') {
+            const consoleLog = document.getElementById('consoleLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry`;
+            if (type === 'warn') entry.classList.add('log-warn');
+            if (type === 'success') entry.classList.add('log-success');
+            
+            entry.innerText = `> ${text}`;
+            consoleLog.appendChild(entry);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+
+        // Ключевой ИИ-алгоритм выбора следующего шага
+        function aiLogicStep() {
+            // Считываем состояние переключателей мозга ИИ
+            const useMemory = document.getElementById('skillMemory').checked;
+            const useHeuristic = document.getElementById('skillHeuristic').checked;
+            const useAvoidance = document.getElementById('skillAvoidance').checked;
+
+            // Возможные направления шага (Вверх, Вниз, Влево, Вправо)
+            const directions = [
+                { x: 0, y: -1, name: "Вверх" },
+                { x: 0, y: 1, name: "Вниз" },
+                { x: -1, y: 0, name: "Влево" },
+                { x: 1, y: 0, name: "Вправо" }
+            ];
+
+            let bestMove = null;
+            let minScore = Infinity;
+
+            for (let dir of directions) {
+                let nextX = bot.x + dir.x;
+                let nextY = bot.y + dir.y;
+
+                // Проверка на выход за границы карты
+                if (nextX < 0 || nextX >= GRID_SIZE || nextY < 0 || nextY >= GRID_SIZE) continue;
+
+                // Базовая цена шага
+                let score = 0;
+
+                // Фича 1: Умение видеть стены (Адаптивный обход)
+                if (gridData[nextY][nextX] === 1) {
+                    if (useAvoidance) {
+                        // Если ИИ умеет обходить стены, он просто начисляет огромный штраф этой клетке, чтобы не ходить туда
+                        score += 1000;
+                    } else {
+                        // Если умение отключено, ИИ слеп к стенам и попробует пойти напролом!
+                        score += 0; 
+                    }
+                }
+
+                // Фича 2: Оценка тупиков (Математическое расстояние до цели)
+                if (useHeuristic) {
+                    // Манхэттенское расстояние: считаем, сколько клеток осталось до финиша
+                    let distanceToTarget = Math.abs(target.x - nextX) + Math.abs(target.y - nextY);
+                    score += distanceToTarget;
+                }
+
+                // Фича 3: Память на прошлые ошибки (Рефлексы)
+                if (useMemory) {
+                    const key = `${nextX},${nextY}`;
+                    if (aiMemory[key]) {
+                        // Если ИИ помнит, что тут была боль или тупик, он накидывает штраф за посещение
+                        score += aiMemory[key] * 10;
+                    }
+                }
+
+                // Выбираем шаг с минимальным штрафом
+                if (score < minScore) {
+                    minScore = score;
+                    bestMove = { x: nextX, y: nextY, dirName: dir.name };
+                }
+            }
+
+            // Пытаемся сделать выбранный шаг
+            if (bestMove) {
+                // Случай, если ИИ врезается в стену (например, если обход отключен, или он зажат)
+                if (gridData[bestMove.y][bestMove.x] === 1) {
+                    logMessage(`БАМС! Робот врезался в стену на (${bestMove.x}, ${bestMove.y})`, 'warn');
+                    
+                    // Если включена память — записываем это гиблое место в мозг, увеличивая штраф
+                    if (useMemory) {
+                        const key = `${bestMove.x},${bestMove.y}`;
+                        aiMemory[key] = (aiMemory[key] || 0) + 5;
+                        logMessage(`Запись в рефлексы: клетка (${bestMove.x}, ${bestMove.y}) опасна.`, 'warn');
+                    }
+                    steps++;
+                } else {
+                    // Успешный шаг по свободной клетке
+                    
+                    // Если память включена, немного штрафуем клетку, с которой уходим, чтобы ИИ не бегал туда-сюда бесконечно
+                    if (useMemory) {
+                        const currentKey = `${bot.x},${bot.y}`;
+                        aiMemory[currentKey] = (aiMemory[currentKey] || 0) + 1;
+                    }
+
+                    bot.x = bestMove.x;
+                    bot.y = bestMove.y;
+                    steps++;
+                    
+                    if (steps % 5 === 0) {
+                        logMessage(`Робот движется ${bestMove.dirName} к точке (${bot.x}, ${bot.y})`);
+                    }
+                }
+            }
+
+            renderEntities();
+
+            // Проверка победы (достижения портала)
+            if (bot.x === target.x && bot.y === target.y) {
+                logMessage(`УРА! Робот добрался до портала за ${steps} шагов!`, 'success');
+                clearInterval(simInterval);
+                setTimeout(() => {
+                    alert(`Робот успешно прошел твою полосу препятствий за ${steps} шагов!`);
+                    resetSimulation();
+                }, 300);
+            }
+        }
+
+        function resetSimulation() {
+            bot = { x: 1, y: 1 };
+            steps = 0;
+            // Саму память ИИ (aiMemory) и стены мы НЕ стираем, чтобы он помнил твою карту!
+            logMessage("Симуляция перезапущена. Опыт ИИ сохранен.", "success");
+            renderEntities();
+            
+            clearInterval(simInterval);
+            simInterval = setInterval(aiLogicStep, 250); // Робот думает 4 раза в секунду
+        }
+
+        document.getElementById('resetSimulationBtn').addEventListener('click', () => {
+            aiMemory = {};
+            gridData = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0));
+            bot = { x: 1, y: 1 };
+            steps = 0;
+            logMessage("Полный сброс: мозг ИИ очищен, карта стёрта.");
+            createGrid();
+            clearInterval(simInterval);
+            simInterval = setInterval(aiLogicStep, 250);
+        });
+
+        // Запуск проекта при старте страницы
+        createGrid();
+        logMessage("Система UIN-Bot запущена. Мозг ИИ готов к операциям.");
+        simInterval = setInterval(aiLogicStep, 250);
+    </script>
+</body>
+</html>
