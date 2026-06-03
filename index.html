@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UINEEX AI - Reflex Sandbox v1.5</title>
+    <title>UINEEX AI - Reflex Sandbox v1.6</title>
     <style>
         /* Стильная строгая серая тема */
         body {
@@ -24,11 +24,12 @@
             padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
             box-sizing: border-box;
+            overflow-y: auto;
         }
 
-        .logo { font-size: 20px; font-weight: bold; color: #ffffff; text-align: center; letter-spacing: 1px; }
+        .logo { font-size: 20px; font-weight: bold; color: #ffffff; text-align: center; letter-spacing: 1px; margin-bottom: 5px; }
 
         .panel-box {
             background-color: #2d2d2d;
@@ -37,7 +38,7 @@
             border: 1px solid #3d3d3d;
         }
 
-        .panel-box h3 { margin-top: 0; font-size: 12px; color: #b0b0b0; text-transform: uppercase; margin-bottom: 8px;}
+        .panel-box h3 { margin-top: 0; font-size: 11px; color: #b0b0b0; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;}
 
         .main-container {
             flex: 1;
@@ -68,20 +69,23 @@
             height: 35px;
             background-color: #1e1e1e;
             border-radius: 3px;
-            transition: background-color 0.15s;
+            transition: background-color 0.1s;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
+            font-size: 16px;
         }
 
         .cell:hover { background-color: #2a2a2a; }
         
         /* Стили объектов на карте */
-        .wall { background-color: #7a3a3a !important; border: 1px solid #9c4a4a; box-sizing: border-box; }
-        .bot { background-color: #3a6b8b !important; border-radius: 50%; box-shadow: 0 0 10px #4fc1ff; }
-        .target { background-color: #3a8b4a !important; border-radius: 4px; box-shadow: 0 0 10px #44a356; animation: pulse 2s infinite; }
+        .wall { background-color: #613333 !important; border: 1px solid #854545; box-sizing: border-box; }
+        .trap { background-color: #d67627 !important; border: 1px solid #f09343; box-sizing: border-box; position: relative; }
+        .trap::after { content: "▲"; font-size: 9px; color: #1a1a1a; position: absolute; bottom: 1px; }
+        
+        .bot { background-color: #3a6b8b !important; border-radius: 50%; box-shadow: 0 0 10px #4fc1ff; z-index: 10; }
+        .target { background-color: #3a8b4a !important; border-radius: 4px; box-shadow: 0 0 10px #44a356; animation: pulse 2s infinite; z-index: 5; }
         
         @keyframes pulse {
             0% { transform: scale(1); }
@@ -89,40 +93,57 @@
             100% { transform: scale(1); }
         }
 
-        /* Переключатели способностей в мозгу */
+        /* Выбор инструмента */
+        .tool-select {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        .tool-btn {
+            flex: 1;
+            background-color: #242424;
+            border: 1px solid #444;
+            padding: 8px;
+            font-size: 12px;
+            border-radius: 4px;
+            text-align: center;
+            cursor: pointer;
+        }
+        .tool-btn.active {
+            background-color: #4a4a4a;
+            border-color: #888;
+            font-weight: bold;
+        }
+
+        /* Переключатели способностей */
         .skill-toggle {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 13px;
+            margin-bottom: 6px;
+            font-size: 12px;
             background: #242424;
-            padding: 6px 10px;
+            padding: 5px 8px;
             border-radius: 4px;
             border: 1px solid #3d3d3d;
         }
 
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 34px;
-            height: 20px;
-        }
+        .switch { position: relative; display: inline-block; width: 30px; height: 16px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider {
             position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #555; transition: .3s; border-radius: 20px;
+            background-color: #555; transition: .2s; border-radius: 16px;
         }
         .slider:before {
-            position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
-            background-color: white; transition: .3s; border-radius: 50%;
+            position: absolute; content: ""; height: 12px; width: 12px; left: 2px; bottom: 2px;
+            background-color: white; transition: .2s; border-radius: 50%;
         }
         input:checked + .slider { background-color: #3a8b4a; }
         input:checked + .slider:before { transform: translateX(14px); }
 
-        /* Лог консоли ИИ */
+        /* Лог консоли */
         .console-log {
-            height: 140px;
+            height: 120px;
             background-color: #111111;
             border: 1px solid #333333;
             border-radius: 6px;
@@ -135,6 +156,7 @@
         }
         .log-entry { margin-bottom: 4px; line-height: 1.3; }
         .log-warn { color: #cc9933; }
+        .log-danger { color: #ff5555; font-weight: bold; }
         .log-success { color: #44a356; }
 
         /* Кнопки управления */
@@ -143,24 +165,24 @@
             padding: 10px 15px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.2s;
         }
         
-        .btn-start { background-color: #3a8b4a; font-size: 14px; margin-bottom: 8px; }
+        .btn-start { background-color: #3a8b4a; font-size: 14px; margin-bottom: 6px; }
         .btn-start:hover { background-color: #44a356; }
         
-        .btn-stop { background-color: #8b3a3a; font-size: 14px; margin-bottom: 8px; display: none; }
+        .btn-stop { background-color: #8b3a3a; font-size: 14px; margin-bottom: 6px; display: none; }
         .btn-stop:hover { background-color: #a34444; }
 
         .btn-clear { background-color: #4a4a4a; font-size: 12px; }
         .btn-clear:hover { background-color: #5a5a5a; }
 
-        .stats-text { font-size: 12px; margin-bottom: 5px; color: #aaaaaa; }
+        .stats-text { font-size: 12px; margin-bottom: 4px; color: #aaaaaa; }
         .stats-text b { color: #ffffff; }
 
         #gameStatusHeader {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: bold;
             color: #cc9933;
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             text-transform: uppercase;
         }
     </style>
@@ -172,75 +194,75 @@
         
         <div class="panel-box">
             <h3>🎮 Панель Испытания</h3>
-            <div id="gameStatusHeader">🛠️ РЕЖИМ СТРОИТЕЛЬСТВА</div>
-            <button id="startSimulationBtn" class="btn-start">▶ ЗАПУСТИТЬ РОБОТА</button>
-            <button id="stopSimulationBtn" class="btn-stop">🛑 СБРОСИТЬ НА СТАРТ</button>
-            <button id="clearMapBtn" class="btn-clear">Очистить карту от стен</button>
+            <div id="gameStatusHeader">🛠️ СТРОИТЕЛЬСТВА</div>
+            <button id="startSimulationBtn" class="btn-start">▶ ЗАПУСТИТЬ ТЕСТ</button>
+            <button id="stopSimulationBtn" class="btn-stop">🛑 НА СТАРТ</button>
+            <button id="clearMapBtn" class="btn-clear">Очистить всё</button>
         </div>
 
         <div class="panel-box">
-            <h3>🧠 Нейро-Модификатор Способностей</h3>
-            
+            <h3>🧱 Выбор Материала (ЛКМ)</h3>
+            <div class="tool-select">
+                <div id="toolWall" class="tool-btn active" onclick="selectTool('wall')">🧱 СТЕНА</div>
+                <div id="toolTrap" class="tool-btn" onclick="selectTool('trap')">🔥 ЛОВУШКА</div>
+            </div>
+            <div style="font-size: 10px; color: #888; margin-top: 6px; text-align: center;">
+                🖱️ ЛКМ — ставить | ПКМ — удалить блок
+            </div>
+        </div>
+
+        <div class="panel-box">
+            <h3>🧠 Модификатор Способностей</h3>
             <div class="skill-toggle">
                 <span>Память на препятствия</span>
-                <label class="switch">
-                    <input type="checkbox" id="skillMemory" checked>
-                    <span class="slider"></span>
-                </label>
+                <label class="switch"><input type="checkbox" id="skillMemory" checked><span class="slider"></span></label>
             </div>
-            
             <div class="skill-toggle">
-                <span>Оценка тупиков (Эвристика)</span>
-                <label class="switch">
-                    <input type="checkbox" id="skillHeuristic" checked>
-                    <span class="slider"></span>
-                </label>
+                <span>Оценка расстояния</span>
+                <label class="switch"><input type="checkbox" id="skillHeuristic" checked><span class="slider"></span></label>
             </div>
-
             <div class="skill-toggle">
-                <span>Адаптивный обход стен</span>
-                <label class="switch">
-                    <input type="checkbox" id="skillAvoidance" checked>
-                    <span class="slider"></span>
-                </label>
+                <span>Видеть стены пред носом</span>
+                <label class="switch"><input type="checkbox" id="skillAvoidance" checked><span class="slider"></span></label>
             </div>
         </div>
 
         <div class="panel-box">
             <h3>📊 Статы Нейросети</h3>
             <div class="stats-text">Позиция робота: <b id="botPos">(1, 1)</b></div>
-            <div class="stats-text">Запомнено препятствий: <b id="wallsLearned">0</b></div>
+            <div class="stats-text">Запомнено точек: <b id="wallsLearned">0</b></div>
             <div class="stats-text">Сделано шагов: <b id="stepsCount">0</b></div>
         </div>
 
-        <div class="panel-box" style="flex: 1; display: flex; flex-direction: column;">
+        <div class="panel-box" style="flex: 1; display: flex; flex-direction: column; margin-bottom: 0;">
             <h3>📟 Монитор Мышления ИИ</h3>
             <div class="console-log" id="consoleLog"></div>
         </div>
     </div>
 
     <div class="main-container">
-        <div id="instructionText" style="margin-bottom: 15px; font-size: 13px; color: #aaa; transition: color 0.3s;">
-            🛠️ <b>Режим строительства:</b> Кликай по клеткам поля, чтобы построить лабиринт испытания, затем жми кнопку запуска!
+        <div id="instructionText" style="margin-bottom: 15px; font-size: 13px; color: #aaa;">
+            🛠️ Построй лабиринт или ловушки и нажми кнопку запуска!
         </div>
         <div id="grid-container"></div>
     </div>
 
     <script>
         const GRID_SIZE = 15;
-        let gridData = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0)); // 0 - пусто, 1 - стена
+        let gridData = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0)); // 0-пусто, 1-стена, 2-ловушка
         
-        // Координаты сущностей
         let bot = { x: 1, y: 1 };
         let target = { x: 13, y: 13 };
         
-        // Состояние игры
+        let currentTool = 'wall'; // 'wall' или 'trap'
         let isRunning = false;
-        let aiMemory = {}; // Память ИИ
+        let aiMemory = {}; 
         let steps = 0;
         let simInterval = null;
 
-        // Инициализация сетки
+        // Отключаем дефолтное меню браузера по правому клику на всей странице
+        document.addEventListener('contextmenu', event => event.preventDefault());
+
         const gridContainer = document.getElementById('grid-container');
         function createGrid() {
             gridContainer.innerHTML = '';
@@ -251,12 +273,16 @@
                     cell.dataset.x = x;
                     cell.dataset.y = y;
                     
-                    // Клик меняет стену
-                    cell.addEventListener('mousedown', () => {
-                        if (!isRunning) {
-                            toggleWall(x, y);
-                        } else {
-                            logMessage("Нельзя строить во время теста! Сначала останови робота.", "warn");
+                    // Левый клик — установка
+                    cell.addEventListener('mousedown', (e) => {
+                        if (isRunning) {
+                            logMessage("Строительство заблокировано во время теста!", "warn");
+                            return;
+                        }
+                        if (e.button === 0) { // ЛКМ
+                            placeBlock(x, y);
+                        } else if (e.button === 2) { // ПКМ
+                            removeBlock(x, y);
                         }
                     });
                     
@@ -264,6 +290,26 @@
                 }
             }
             renderEntities();
+        }
+
+        function selectTool(tool) {
+            currentTool = tool;
+            document.getElementById('toolWall').classList.toggle('active', tool === 'wall');
+            document.getElementById('toolTrap').classList.toggle('active', tool === 'trap');
+        }
+
+        function placeBlock(x, y) {
+            if ((x === bot.x && y === bot.y) || (x === target.x && y === target.y)) return;
+            gridData[y][x] = (currentTool === 'wall') ? 1 : 2;
+            renderEntities();
+        }
+
+        function removeBlock(x, y) {
+            if (gridData[y][x] !== 0) {
+                gridData[y][x] = 0;
+                renderEntities();
+                logMessage(`Удален блок в точке (${x}, ${y})`);
+            }
         }
 
         function renderEntities() {
@@ -275,9 +321,10 @@
                 cell.className = 'cell'; 
                 cell.innerText = '';
                 
-                if (gridData[y][x] === 1) {
-                    cell.classList.add('wall');
-                } else if (bot.x === x && bot.y === y) {
+                if (gridData[y][x] === 1) cell.classList.add('wall');
+                if (gridData[y][x] === 2) cell.classList.add('trap');
+                
+                if (bot.x === x && bot.y === y) {
                     cell.classList.add('bot');
                     cell.innerText = '🤖';
                 } else if (target.x === x && target.y === y) {
@@ -291,17 +338,12 @@
             document.getElementById('wallsLearned').innerText = Object.keys(aiMemory).length;
         }
 
-        function toggleWall(x, y) {
-            if ((x === bot.x && y === bot.y) || (x === target.x && y === target.y)) return;
-            gridData[y][x] = gridData[y][x] === 1 ? 0 : 1;
-            renderEntities();
-        }
-
         function logMessage(text, type = '') {
             const consoleLog = document.getElementById('consoleLog');
             const entry = document.createElement('div');
             entry.className = `log-entry`;
             if (type === 'warn') entry.classList.add('log-warn');
+            if (type === 'danger') entry.classList.add('log-danger');
             if (type === 'success') entry.classList.add('log-success');
             
             entry.innerText = `> ${text}`;
@@ -309,19 +351,68 @@
             consoleLog.scrollTop = consoleLog.scrollHeight;
         }
 
-        // Логика движения ИИ
+        // ПРОВЕРКА ДОСТИЖИМОСТИ ПОРТАЛА (Алгоритм Ли / Поиск в ширину)
+        function checkPathExists() {
+            let queue = [{ x: bot.x, y: bot.y }];
+            let visited = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(false));
+            visited[bot.y][bot.x] = true;
+
+            while (queue.length > 0) {
+                let current = queue.shift();
+
+                if (current.x === target.x && current.y === target.y) {
+                    return true; // Путь есть!
+                }
+
+                const directions = [{x:0, y:-1}, {x:0, y:1}, {x:-1, y:0}, {x:1, y:0}];
+                for (let d of directions) {
+                    let nx = current.x + d.x;
+                    let ny = current.y + d.y;
+
+                    if (nx >= 0 && nx < GRID_SIZE && ny >= 0 && ny < GRID_SIZE) {
+                        // Стены (1) блокируют проход физически, ловушки (2) — нет
+                        if (!visited[ny][nx] && gridData[ny][nx] !== 1) {
+                            visited[ny][nx] = true;
+                            queue.push({ x: nx, y: ny });
+                        }
+                    }
+                }
+            }
+            return false; // Путь заблокирован стенками!
+        }
+
+        // АВТОМАТИЧЕСКАЯ ЗАЩИТА ПОРТАЛА (Очистка застройки)
+        function autoUnblockPortal() {
+            logMessage("ОБНАРУЖЕНА КРИТИЧЕСКАЯ БЛОКИРОВКА ПОРТАЛА!", "danger");
+            logMessage("Активация Щита Портала: очистка зон застройки...", "warn");
+            
+            // Защитный радиус вокруг финиша (очищаем соседние клетки)
+            const targetNeighbors = [
+                {x: target.x, y: target.y},
+                {x: target.x - 1, y: target.y},
+                {x: target.x + 1, y: target.y},
+                {x: target.x, y: target.y - 1},
+                {x: target.x, y: target.y + 1}
+            ];
+
+            targetNeighbors.forEach(pos => {
+                if (pos.x >= 0 && pos.x < GRID_SIZE && pos.y >= 0 && pos.y < GRID_SIZE) {
+                    if (gridData[pos.y][pos.x] === 1) {
+                        gridData[pos.y][pos.x] = 0; // Сносим стену!
+                    }
+                }
+            });
+
+            renderEntities();
+        }
+
+        // Шаг ИИ
         function aiLogicStep() {
             const useMemory = document.getElementById('skillMemory').checked;
             const useHeuristic = document.getElementById('skillHeuristic').checked;
             const useAvoidance = document.getElementById('skillAvoidance').checked;
 
-            const directions = [
-                { x: 0, y: -1, name: "Вверх" },
-                { x: 0, y: 1, name: "Вниз" },
-                { x: -1, y: 0, name: "Влево" },
-                { x: 1, y: 0, name: "Вправо" }
-            ];
-
+            const directions = [{x:0, y:-1, n:"Вверх"}, {x:0, y:1, n:"Вниз"}, {x:-1, y:0, n:"Влево"}, {x:1, y:0, n:"Вправо"}];
             let bestMove = null;
             let minScore = Infinity;
 
@@ -333,101 +424,103 @@
 
                 let score = 0;
 
-                if (gridData[nextY][nextX] === 1) {
-                    if (useAvoidance) {
-                        score += 1000;
-                    } else {
-                        score += 0; 
-                    }
-                }
+                // Стены
+                if (gridData[nextY][nextX] === 1 && useAvoidance) score += 1000;
 
+                // Расстояние
                 if (useHeuristic) {
-                    let distanceToTarget = Math.abs(target.x - nextX) + Math.abs(target.y - nextY);
-                    score += distanceToTarget;
+                    score += Math.abs(target.x - nextX) + Math.abs(target.y - nextY);
                 }
 
+                // Память
                 if (useMemory) {
                     const key = `${nextX},${nextY}`;
-                    if (aiMemory[key]) {
-                        score += aiMemory[key] * 12;
-                    }
+                    if (aiMemory[key]) score += aiMemory[key] * 15;
                 }
 
                 if (score < minScore) {
                     minScore = score;
-                    bestMove = { x: nextX, y: nextY, dirName: dir.name };
+                    bestMove = { x: nextX, y: nextY, name: dir.n };
                 }
             }
 
             if (bestMove) {
+                // Если врезался в стену
                 if (gridData[bestMove.y][bestMove.x] === 1) {
                     logMessage(`БАМС! Препятствие на (${bestMove.x}, ${bestMove.y})`, 'warn');
-                    if (useMemory) {
-                        const key = `${bestMove.x},${bestMove.y}`;
-                        aiMemory[key] = (aiMemory[key] || 0) + 5;
-                    }
+                    if (useMemory) aiMemory[`${bestMove.x},${bestMove.y}`] = (aiMemory[`${bestMove.x},${bestMove.y}`] || 0) + 8;
                     steps++;
                 } else {
-                    if (useMemory) {
-                        const currentKey = `${bot.x},${bot.y}`;
-                        aiMemory[currentKey] = (aiMemory[currentKey] || 0) + 1;
-                    }
+                    // Успешный шаг
                     bot.x = bestMove.x;
                     bot.y = bestMove.y;
                     steps++;
+
+                    // ЕСЛИ ПОПАЛ В ЛОВУШКУ!
+                    if (gridData[bot.y][bot.x] === 2) {
+                        logMessage(`🔥 ААА! Робот попал в ловушку на (${bot.x}, ${bot.y})!`, 'danger');
+                        if (useMemory) {
+                            // Ловушка выжигает жесткий вечный штраф памяти в мозг робота на эту клетку!
+                            aiMemory[`${bot.x},${bot.y}`] = (aiMemory[`${bot.x},${bot.y}`] || 0) + 25;
+                        }
+                    } else if (useMemory) {
+                        aiMemory[`${bot.x},${bot.y}`] = (aiMemory[`${bot.x},${bot.y}`] || 0) + 1;
+                    }
                 }
             }
 
             renderEntities();
 
-            // Если бот дошел до финиша
             if (bot.x === target.x && bot.y === target.y) {
                 clearInterval(simInterval);
-                logMessage(`ПОБЕДА! Робот прошел карту за ${steps} шагов!`, 'success');
-                
+                logMessage(`ПОБЕДА! Карта пройдена за ${steps} шагов!`, 'success');
                 setTimeout(() => {
-                    alert(`🎉 Робот успешно прошел твое испытание за ${steps} шагов! Мозг ИИ обучен. Построй новый уровень!`);
+                    alert(`🎉 Робот прошел уровень за ${steps} шагов!`);
                     autoResetToNextLevel();
                 }, 200);
             }
         }
 
-        // Функция автоматического сброса карты для СЛЕДУЮЩЕГО испытания
         function autoResetToNextLevel() {
             isRunning = false;
             bot = { x: 1, y: 1 };
             steps = 0;
-            gridData = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0)); // Очищаем старые стены
+            gridData = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0));
             
-            // Кнопки возвращаются в режим стройки
             document.getElementById('startSimulationBtn').style.display = "block";
             document.getElementById('stopSimulationBtn').style.display = "none";
-            document.getElementById('gameStatusHeader').innerText = "🛠️ РЕЖИМ СТРОИТЕЛЬСТВА";
+            document.getElementById('gameStatusHeader').innerText = "🛠️ СТРОИТЕЛЬСТВО";
             document.getElementById('gameStatusHeader').style.color = "#cc9933";
-            document.getElementById('instructionText').innerHTML = "🛠️ <b>Режим строительства:</b> Карта очищена! Построй новое испытание и нажми кнопку запуска.";
-            document.getElementById('instructionText').style.color = "#aaa";
+            document.getElementById('instructionText').innerHTML = "🛠️ Карта очищена! Сделай новое крутое испытание с ловушками!";
             
             createGrid();
         }
 
-        // Кнопка ЗАПУСКА ТЕСТА
+        // Запуск
         document.getElementById('startSimulationBtn').addEventListener('click', () => {
+            // КРИТИЧЕСКАЯ ПРОВЕРКА: ЗАБЛОКИРОВАН ЛИ ПУТЬ?
+            if (!checkPathExists()) {
+                autoUnblockPortal();
+                // Запускаем повторную проверку, если игрок застроил вообще всё поле крест-накрест
+                if (!checkPathExists()) {
+                    logMessage("Ошибка: Карта полностью завалена! Старт отменён.", "danger");
+                    return;
+                }
+            }
+
             isRunning = true;
             steps = 0;
             
             document.getElementById('startSimulationBtn').style.display = "none";
             document.getElementById('stopSimulationBtn').style.display = "block";
-            
-            document.getElementById('gameStatusHeader').innerText = "⚡ ТЕСТИРОВАНИЕ ИИ...";
+            document.getElementById('gameStatusHeader').innerText = "⚡ ТЕСТ ИИ...";
             document.getElementById('gameStatusHeader').style.color = "#44a356";
-            document.getElementById('instructionText').innerHTML = "⚡ <b>Идет тест:</b> Робот пытается найти обходные пути. Строительство заблокировано.";
-            document.getElementById('instructionText').style.color = "#44a356";
             
-            logMessage("ИСПЫТАНИЕ НАЧАЛОСЬ! Робот запущен.");
-            simInterval = setInterval(aiLogicStep, 200); // Робот делает шаг каждые 0.2 сек
+            logMessage("Тестирование началось.");
+            simInterval = setInterval(aiLogicStep, 150); // Чуть-чуть ускорили робота для динамики!
         });
 
-        // Кнопка СБРОСА В РЕЖИМ СТРОИТЕЛЬСТВА
+        // Стоп
         document.getElementById('stopSimulationBtn').addEventListener('click', () => {
             clearInterval(simInterval);
             isRunning = false;
@@ -436,29 +529,24 @@
             
             document.getElementById('startSimulationBtn').style.display = "block";
             document.getElementById('stopSimulationBtn').style.display = "none";
-            
-            document.getElementById('gameStatusHeader').innerText = "🛠️ РЕЖИМ СТРОИТЕЛЬСТВА";
+            document.getElementById('gameStatusHeader').innerText = "🛠️ СТРОИТЕЛЬСТВО";
             document.getElementById('gameStatusHeader').style.color = "#cc9933";
-            document.getElementById('instructionText').innerHTML = "🛠️ <b>Режим строительства:</b> Испытание прервано. Измени стены и попробуй снова.";
-            document.getElementById('instructionText').style.color = "#aaa";
             
-            logMessage("Тест остановлен. Робот возвращен на старт.");
+            logMessage("Тест прерван. Робот на старте.");
             renderEntities();
         });
 
-        // Кнопка полной ручной очистки карты
         document.getElementById('clearMapBtn').addEventListener('click', () => {
             if (!isRunning) {
                 gridData = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0));
-                aiMemory = {}; // Полностью чистим и память, чтобы обнулить опыт
-                logMessage("Карта и память робота полностью очищены.");
+                aiMemory = {};
+                logMessage("Карта и память робота очищены.");
                 renderEntities();
             }
         });
 
-        // Первый запуск
         createGrid();
-        logMessage("Конструктор испытаний готов к работе. Начни строить стены!");
+        logMessage("Конструктор v1.6 готов. Выбери инструмент и начни строить!");
     </script>
 </body>
 </html>
