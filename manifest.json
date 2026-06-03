@@ -1,0 +1,16 @@
+{
+  "name": "UIN-Bot Simulator",
+  "short_name": "UIN-Bot",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#242424",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2023/2023336.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
